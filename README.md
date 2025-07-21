@@ -1,22 +1,3 @@
-KULLANILAN TEKNOLOJİLER
-HTML
-
-CSS
-
-JavaScript (Vanilla)
-
-OpenWeatherMap API
-
-
-
-
-ÖZELLİKLER
-Şehir adı girerek anlık hava durumu verilerini alma
-
-Sıcaklık, nem ve hava durumu açıklaması gösterme
-
-Hatalı şehir girişlerinde uyarı verme
-
-Basit ve kullanıcı dostu arayüz
+Bu projenin amacı, API kullanımı, JavaScript ile veri çekme (fetch), DOM manipülasyonu ve kullanıcı etkileşimleri (buton tıklamaları, input okuma vb.) gibi temel web geliştirme yeteneklerini pekiştirmektir. Aynı zamanda kullanıcı deneyimini artırmak için sade ama işlevsel bir arayüz sunar.
 
 Pull request’lere ve geri bildirimlere her zaman açığım. 

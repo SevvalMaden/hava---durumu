@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hava Durumu Uygulaması</title>
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>Hava Durumu</h1>
+    <input type="text" id="sehir" placeholder="Şehir adı girin..." />
+    <button id="ara">GETİR</button>
+    <div id="sonuc"></div>
+  </div>
+
+  <script>
+     document.getElementById("ara").addEventListener("click", getWeather);
+     document.getElementById("sehir").addEventListener("keypress", function(e) {
+       if (e.key === "Enter") {
+         getWeather();
+       }
+     });
+
+    async function getWeather() {
+      const location = document.getElementById("sehir").value.trim();
+      if (!location) {
+        document.getElementById("sonuc").innerHTML = `<p class="inline-error">Lütfen bir yer adı girin</p>`;
+        return;
+      }
+
+      const apiKey = "1895ed965bbfa2290aa3ba8dc41bbab0";
+      const resultDiv = document.getElementById("sonuc");
+      
+      // Yükleniyor göstergesi
+      resultDiv.innerHTML = `<p class="inline-loading">Hava durumu bilgisi getiriliyor...</p>`;
+
+      try {
+        // 1. Geocoding API ile konum bilgisini al (Türkiye'ye özel)
+        const geoUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(location)},TR&limit=5&appid=${apiKey}`;
+        const geoResponse = await fetch(geoUrl);
+        
+        if (!geoResponse.ok) {
+          throw new Error("Konum araması başarısız");
+        }
+
+        const geoData = await geoResponse.json();
+        
+        if (geoData.length === 0) {
+          throw new Error("Konum bulunamadı. Lütfen il, ilçe veya mahalle adını kontrol edin");
+        }
+
+        // En uygun sonucu seç (Türkiye'deki ilk sonuç)
+        const locationData = geoData[0];
+        const { lat, lon, name, local_names, state } = locationData;
+
+        // 2. Koordinatlarla hava durumu bilgisini al
+        const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric&lang=tr`;
+        const weatherResponse = await fetch(weatherUrl);
+        
+        if (!weatherResponse.ok) {
+          throw new Error("Hava durumu bilgisi alınamadı");
+        }
+
+        const weatherData = await weatherResponse.json();
+
+        // Türkçe konum adını kullan
+        const displayName = local_names?.tr || name;
+        const stateName = state || '';
+
+        // Sonuçları göster
+        resultDiv.innerHTML = `
+          <div class="result-card">
+            <h3 class="result-header">${displayName}${stateName ? ', ' + stateName : ''}</h3>
+            <div class="result-main-display">
+              <img src="https://openweathermap.org/img/wn/${weatherData.weather[0].icon}@2x.png" alt="Hava durumu ikonu" class="result-icon">
+              <div class="result-temp">${Math.round(weatherData.main.temp)}°C</div>
+            </div>
+            <p class="result-description">${weatherData.weather[0].description}</p>
+            <div class="result-details-grid">
+              <div class="result-detail-box">
+                <div class="result-detail-label">Hissedilen</div>
+                <div class="result-detail-value">${Math.round(weatherData.main.feels_like)}°C</div>
+              </div>
+              <div class="result-detail-box">
+                <div class="result-detail-label">Nem</div>
+                <div class="result-detail-value">${weatherData.main.humidity}%</div>
+              </div>
+              <div class="result-detail-box">
+                <div class="result-detail-label">Rüzgar</div>
+                <div class="result-detail-value">${Math.round(weatherData.wind.speed * 3.6)} km/s</div>
+              </div>
+              <div class="result-detail-box">
+                <div class="result-detail-label">Basınç</div>
+                <div class="result-detail-value">${weatherData.main.pressure} hPa</div>
+              </div>
+            </div>
+            <div class="result-coordinates">
+              Koordinatlar: ${lat.toFixed(4)}, ${lon.toFixed(4)}
+            </div>
+          </div>
+        `;
+
+        // Eğer birden fazla sonuç varsa, alternatif lokasyonları göster
+        if (geoData.length > 1) {
+          let alternativesHtml = '<div class="alternatives-wrapper"><p class="alternatives-header">Diğer eşleşen konumlar:</p><div class="alternatives-buttons">';
+          
+          for (let i = 1; i < Math.min(geoData.length, 4); i++) {
+            const alt = geoData[i];
+            const altName = alt.local_names?.tr || alt.name;
+            const altState = alt.state || '';
+            alternativesHtml += `<button onclick="showWeatherForCoords(${alt.lat}, ${alt.lon}, '${altName}', '${altState}')" class="alt-location-btn">${altName}${altState ? ', ' + altState : ''}</button>`;
+          }
+          
+          alternativesHtml += '</div></div>';
+          resultDiv.innerHTML += alternativesHtml;
+        }
+
+      } catch (error) {
+        resultDiv.innerHTML = `<p class="error-message">${error.message}</p>`;
+      }
+    }
+
+    // Alternatif lokasyon için hava durumu göster
+    async function showWeatherForCoords(lat, lon, name, state) {
+      const apiKey = "1895ed965bbfa2290aa3ba8dc41bbab0";
+      const resultDiv = document.getElementById("sonuc");
+      
+      resultDiv.innerHTML = `<p class="inline-loading">Hava durumu bilgisi getiriliyor...</p>`;
+
+      try {
+        const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric&lang=tr`;
+        const weatherResponse = await fetch(weatherUrl);
+        
+        if (!weatherResponse.ok) {
+          throw new Error("Hava durumu bilgisi alınamadı");
+        }
+
+        const weatherData = await weatherResponse.json();
+
+        resultDiv.innerHTML = `
+          <div class="result-card">
+            <h3 class="result-header">${name}${state ? ', ' + state : ''}</h3>
+            <div class="result-main-display">
+              <img src="https://openweathermap.org/img/wn/${weatherData.weather[0].icon}@2x.png" alt="Hava durumu ikonu" class="result-icon">
+              <div class="result-temp">${Math.round(weatherData.main.temp)}°C</div>
+            </div>
+            <p class="result-description">${weatherData.weather[0].description}</p>
+            <div class="result-details-grid">
+              <div class="result-detail-box">
+                <div class="result-detail-label">Hissedilen</div>
+                <div class="result-detail-value">${Math.round(weatherData.main.feels_like)}°C</div>
+              </div>
+              <div class="result-detail-box">
+                <div class="result-detail-label">Nem</div>
+                <div class="result-detail-value">${weatherData.main.humidity}%</div>
+              </div>
+              <div class="result-detail-box">
+                <div class="result-detail-label">Rüzgar</div>
+                <div class="result-detail-value">${Math.round(weatherData.wind.speed * 3.6)} km/s</div>
+              </div>
+              <div class="result-detail-box">
+                <div class="result-detail-label">Basınç</div>
+                <div class="result-detail-value">${weatherData.main.pressure} hPa</div>
+              </div>
+            </div>
+            <div class="result-coordinates">
+              Koordinatlar: ${lat.toFixed(4)}, ${lon.toFixed(4)}
+            </div>
+          </div>
+        `;
+      } catch (error) {
+        resultDiv.innerHTML = `<p class="error-message">${error.message}</p>`;
+      }
+    }
+    
+  </script>
+</body>
+</html>
